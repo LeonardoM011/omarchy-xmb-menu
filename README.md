@@ -23,3 +23,5 @@ Disable or remove `patrick.menu` to return immediately to the packaged
 The category rail uses a fixed XMB anchor: the selected category stays put
 while the surrounding categories slide horizontally. Search results are
 ranked across the complete menu and show their source category when useful.
+The background adds several gently intersecting, animated translucent ribbons
+while the overlay is visible.

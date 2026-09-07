@@ -59,30 +59,69 @@ Item {
       }
     }
 
-    // Soft moving ribbons evoke the XMB background without using Sony assets.
-    Rectangle {
-      width: panel.width * 1.45
-      height: Math.max(90, panel.height * 0.15)
-      x: -panel.width * 0.20
-      y: panel.height * 0.60
-      rotation: -7
-      radius: height / 2
-      color: Qt.rgba(0.18, 0.62, 0.96, 0.07)
-      SequentialAnimation on y {
-        loops: Animation.Infinite
-        NumberAnimation { to: panel.height * 0.55; duration: 6500; easing.type: Easing.InOutSine }
-        NumberAnimation { to: panel.height * 0.60; duration: 6500; easing.type: Easing.InOutSine }
-      }
-    }
+    // Slowly intersecting translucent ribbons, drawn only while the overlay is
+    // visible. This keeps the organic XMB motion without shipping Sony assets
+    // or continuously animating a hidden, keep-loaded plugin.
+    Canvas {
+      id: waveCanvas
+      anchors.fill: parent
+      antialiasing: true
+      property real phase: 0
 
-    Rectangle {
-      width: panel.width * 1.35
-      height: Math.max(55, panel.height * 0.09)
-      x: -panel.width * 0.10
-      y: panel.height * 0.69
-      rotation: 5
-      radius: height / 2
-      color: Qt.rgba(0.44, 0.77, 1.0, 0.045)
+      function waveY(x, base, amplitude, cycles, offset, detail) {
+        var t = x / Math.max(1, width)
+        return height * (base
+          + amplitude * Math.sin(t * Math.PI * 2 * cycles + phase + offset)
+          + amplitude * detail * Math.sin(t * Math.PI * 2 * (cycles * 0.47) - phase * 0.62 + offset * 1.7))
+      }
+
+      function drawRibbon(ctx, base, amplitude, cycles, offset, thickness, red, green, blue, alpha) {
+        var step = Math.max(18, width / 110)
+        var x
+        ctx.beginPath()
+        ctx.moveTo(0, waveY(0, base, amplitude, cycles, offset, 0.42))
+        for (x = step; x < width; x += step)
+          ctx.lineTo(x, waveY(x, base, amplitude, cycles, offset, 0.42))
+        ctx.lineTo(width, waveY(width, base, amplitude, cycles, offset, 0.42))
+
+        for (x = width; x >= 0; x -= step) {
+          var breathing = 0.76 + 0.24 * Math.sin((x / Math.max(1, width)) * Math.PI * 3 - phase + offset)
+          ctx.lineTo(x, waveY(x, base, amplitude, cycles, offset, 0.42) + height * thickness * breathing)
+        }
+        ctx.closePath()
+
+        var gradient = ctx.createLinearGradient(0, height * (base - amplitude), 0,
+                                                height * (base + amplitude + thickness))
+        gradient.addColorStop(0, "rgba(" + red + "," + green + "," + blue + ",0)")
+        gradient.addColorStop(0.36, "rgba(" + red + "," + green + "," + blue + "," + alpha + ")")
+        gradient.addColorStop(1, "rgba(" + red + "," + green + "," + blue + ",0)")
+        ctx.fillStyle = gradient
+        ctx.fill()
+      }
+
+      onPaint: {
+        var ctx = getContext("2d")
+        ctx.clearRect(0, 0, width, height)
+        drawRibbon(ctx, 0.53, 0.055, 0.92, 0.2, 0.055, 72, 174, 255, 0.10)
+        drawRibbon(ctx, 0.58, 0.040, 1.13, 2.3, 0.024, 168, 220, 255, 0.13)
+        drawRibbon(ctx, 0.62, 0.072, 0.71, 4.5, 0.060, 35, 121, 232, 0.075)
+        drawRibbon(ctx, 0.66, 0.045, 1.26, 1.1, 0.018, 204, 235, 255, 0.12)
+        drawRibbon(ctx, 0.70, 0.060, 0.84, 3.4, 0.075, 49, 142, 238, 0.055)
+      }
+
+      onPhaseChanged: requestPaint()
+      onWidthChanged: requestPaint()
+      onHeightChanged: requestPaint()
+
+      NumberAnimation {
+        target: waveCanvas
+        property: "phase"
+        from: 0
+        to: Math.PI * 2
+        duration: 22000
+        loops: Animation.Infinite
+        running: panel.visible
+      }
     }
 
     MouseArea {
