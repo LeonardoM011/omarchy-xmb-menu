@@ -19,3 +19,7 @@ not change the Omarchy top bar.
 
 Disable or remove `patrick.menu` to return immediately to the packaged
 `omarchy.menu` implementation.
+
+The category rail uses a fixed XMB anchor: the selected category stays put
+while the surrounding categories slide horizontally. Search results are
+ranked across the complete menu and show their source category when useful.

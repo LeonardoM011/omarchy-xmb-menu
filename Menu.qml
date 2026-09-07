@@ -97,12 +97,7 @@ Item {
       anchors.rightMargin: Math.max(48, panel.width * 0.065)
       anchors.topMargin: Math.max(70, panel.height * 0.12)
       anchors.bottomMargin: Math.max(48, panel.height * 0.08)
-      readonly property real categoryAnchorX: {
-        var selectedCategory = categoryList.itemAtIndex(root.categoryIndex)
-        if (!selectedCategory) return categoryList.width * 0.34
-        return categoryList.x + selectedCategory.x - categoryList.contentX
-      }
-      readonly property real categoryIconCenterOffset: Math.max(44, panel.width * 0.036)
+      readonly property real categoryAnchorCenterX: categoryList.selectedCenterX
 
       MouseArea { anchors.fill: parent; onClicked: {} }
 
@@ -202,74 +197,83 @@ Item {
         font.letterSpacing: 1.5
       }
 
-      ListView {
+      Item {
         id: categoryList
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.topMargin: Math.max(56, panel.height * 0.08)
         height: Math.max(112, panel.height * 0.17)
-        model: categoryModel
-        orientation: ListView.Horizontal
-        spacing: Math.max(12, panel.width * 0.012)
-        clip: true
-        boundsBehavior: Flickable.StopAtBounds
-        currentIndex: root.categoryIndex
-        preferredHighlightBegin: 0
-        preferredHighlightEnd: 0
-        highlightRangeMode: ListView.StrictlyEnforceRange
-        footer: Item {
-          width: Math.max(0, categoryList.width - Math.max(88, panel.width * 0.072))
-          height: 1
-        }
+        clip: false
+        readonly property real delegateWidth: Math.max(88, panel.width * 0.072)
+        readonly property real categoryStep: Math.max(108, panel.width * 0.08)
+        // Leave room for earlier categories on the left. All delegates move
+        // around this point, so the selected category never depends on a
+        // Flickable's viewport or on whether a delegate is instantiated.
+        readonly property real selectedCenterX: Math.min(
+          width * 0.30,
+          Math.max(width * 0.20, categoryStep * 2.15)
+        )
 
-        delegate: Item {
-          id: category
-          required property int index
-          required property string itemId
-          required property string kind
-          required property string icon
-          required property string iconFont
-          required property string label
-          required property string target
-          required property string action
-          width: Math.max(88, panel.width * 0.072)
-          height: categoryList.height
-          readonly property bool selected: index === root.categoryIndex
+        Repeater {
+          model: categoryModel
 
-          scale: selected ? 1.18 : 0.82
-          opacity: selected ? 1.0 : 0.50
-          Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-          Behavior on opacity { NumberAnimation { duration: 120 } }
+          delegate: Item {
+            id: category
+            required property int index
+            required property string itemId
+            required property string kind
+            required property string icon
+            required property string iconFont
+            required property string label
+            required property string target
+            required property string action
+            readonly property int distance: Math.abs(index - root.categoryIndex)
+            readonly property bool selected: distance === 0
+            width: categoryList.delegateWidth
+            height: categoryList.height
+            x: categoryList.selectedCenterX
+              + (index - root.categoryIndex) * categoryList.categoryStep
+              - width / 2
+            z: selected ? 2 : 1
+            scale: selected ? 1.18 : 0.82
+            opacity: selected ? 1.0 : (distance === 1 ? 0.56 : 0.38)
+            visible: x + width > -categoryList.categoryStep
+              && x < categoryList.width + categoryList.categoryStep
 
-          Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: parent.top
-            text: category.icon
-            color: "white"
-            font.family: category.iconFont.length ? category.iconFont : root.fontFamily
-            font.pixelSize: Math.max(38, panel.height * 0.058)
-            style: Text.Raised
-            styleColor: Qt.rgba(0, 0, 0, 0.55)
-          }
+            Behavior on x { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
+            Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: 120 } }
 
-          Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 8
-            text: category.label
-            color: "white"
-            font.family: root.fontFamily
-            font.pixelSize: Math.max(13, Style.font.body)
-            font.weight: category.selected ? Font.DemiBold : Font.Normal
-          }
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.top: parent.top
+              text: category.icon
+              color: "white"
+              font.family: category.iconFont.length ? category.iconFont : root.fontFamily
+              font.pixelSize: Math.max(38, panel.height * 0.058)
+              style: Text.Raised
+              styleColor: Qt.rgba(0, 0, 0, 0.55)
+            }
 
-          MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-              root.categoryIndex = category.index
-              root.activateCategory(true)
+            Text {
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: 8
+              text: category.label
+              color: "white"
+              font.family: root.fontFamily
+              font.pixelSize: Math.max(13, Style.font.body)
+              font.weight: category.selected ? Font.DemiBold : Font.Normal
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.categoryIndex = category.index
+                root.activateCategory(true)
+              }
             }
           }
         }
@@ -277,7 +281,7 @@ Item {
 
       Column {
         anchors.left: parent.left
-        anchors.leftMargin: Math.max(0, card.categoryAnchorX + card.categoryIconCenterOffset - 27)
+        anchors.leftMargin: Math.max(0, card.categoryAnchorCenterX - 27)
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: Math.min(Math.max(420, panel.width * 0.34), parent.width - x)
@@ -335,6 +339,7 @@ Item {
                 : (index === root.selectedIndex
                   ? selectedY
                   : selectedY + 72 + (index - root.selectedIndex - 1) * rowStep)
+              visible: y + height > 0 && y < xmbResultList.height
               opacity: selected ? 1.0 : 0.48
               Behavior on y { NumberAnimation { duration: 145; easing.type: Easing.OutCubic } }
               Behavior on opacity { NumberAnimation { duration: 110 } }
@@ -368,18 +373,33 @@ Item {
                 Behavior on font.pixelSize { NumberAnimation { duration: 120 } }
               }
 
-              Text {
-                anchors.left: xmbRowIcon.right
-                anchors.leftMargin: xmbRow.selected ? 14 : 10
+              Column {
+                anchors.left: parent.left
+                anchors.leftMargin: xmbRow.selected ? 68 : 48
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                text: xmbRow.label
-                color: "white"
-                font.family: root.fontFamily
-                font.pixelSize: xmbRow.selected ? 23 : 17
-                font.weight: xmbRow.selected ? Font.DemiBold : Font.Normal
-                elide: Text.ElideRight
-                Behavior on font.pixelSize { NumberAnimation { duration: 120 } }
+                spacing: 1
+
+                Text {
+                  width: parent.width
+                  text: xmbRow.label
+                  color: "white"
+                  font.family: root.fontFamily
+                  font.pixelSize: xmbRow.selected ? 23 : 17
+                  font.weight: xmbRow.selected ? Font.DemiBold : Font.Normal
+                  elide: Text.ElideRight
+                  Behavior on font.pixelSize { NumberAnimation { duration: 120 } }
+                }
+
+                Text {
+                  width: parent.width
+                  visible: root.filterText && xmbRow.detail.length > 0
+                  text: xmbRow.detail
+                  color: Qt.rgba(1, 1, 1, 0.55)
+                  font.family: root.fontFamily
+                  font.pixelSize: 12
+                  elide: Text.ElideRight
+                }
               }
 
               MouseArea {
@@ -799,8 +819,9 @@ Item {
   function selectCategory(delta) {
     if (categoryModel.count === 0) return
     root.disarmPointer()
-    root.categoryIndex = (root.categoryIndex + delta + categoryModel.count) % categoryModel.count
-    categoryList.positionViewAtIndex(root.categoryIndex, ListView.Beginning)
+    var nextIndex = Math.max(0, Math.min(categoryModel.count - 1, root.categoryIndex + delta))
+    if (nextIndex === root.categoryIndex) return
+    root.categoryIndex = nextIndex
     if (!root.filterText) root.previewCategory(false)
   }
 
@@ -842,7 +863,6 @@ Item {
     for (var i = 0; i < categoryModel.count; i++) {
       if (categoryModel.get(i).itemId === topId) {
         root.categoryIndex = i
-        Qt.callLater(function() { categoryList.positionViewAtIndex(root.categoryIndex, ListView.Beginning) })
         return
       }
     }
@@ -1159,8 +1179,7 @@ Item {
     root.searchDivider = false
 
     if (query) {
-      var currentRows = []
-      var drilldownRows = []
+      var searchRows = []
 
       for (var i = 0; i < root.itemOrder.length; i++) {
         var entry = root.item(root.itemOrder[i])
@@ -1169,8 +1188,7 @@ Item {
 
         var detail = root.parentPathFor(entry.id)
         var row = root.displayRow(entry, detail, root.searchScore(entry, query))
-        if (entry.parent === active) currentRows.push(row)
-        else drilldownRows.push(row)
+        searchRows.push(row)
       }
 
       var searchSort = function(a, b) {
@@ -1178,13 +1196,8 @@ Item {
         return a.path.localeCompare(b.path)
       }
 
-      currentRows.sort(searchSort)
-      drilldownRows.sort(searchSort)
-      root.searchDivider = currentRows.length > 0 && drilldownRows.length > 0
-      if (root.searchDivider) {
-        for (var d = 0; d < drilldownRows.length; d++) drilldownRows[d].section = "drilldown"
-      }
-      rows = currentRows.concat(drilldownRows)
+      searchRows.sort(searchSort)
+      rows = searchRows
     } else {
       for (var j = 0; j < root.itemOrder.length; j++) {
         var child = root.item(root.itemOrder[j])
