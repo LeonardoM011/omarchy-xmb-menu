@@ -214,9 +214,14 @@ Item {
         spacing: Math.max(12, panel.width * 0.012)
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        preferredHighlightBegin: width * 0.34
-        preferredHighlightEnd: width * 0.60
-        highlightRangeMode: ListView.ApplyRange
+        currentIndex: root.categoryIndex
+        preferredHighlightBegin: 0
+        preferredHighlightEnd: 0
+        highlightRangeMode: ListView.StrictlyEnforceRange
+        footer: Item {
+          width: Math.max(0, categoryList.width - Math.max(88, panel.width * 0.072))
+          height: 1
+        }
 
         delegate: Item {
           id: category
@@ -261,12 +266,7 @@ Item {
 
           MouseArea {
             anchors.fill: parent
-            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onEntered: {
-              root.categoryIndex = category.index
-              if (!root.filterText) root.previewCategory(true)
-            }
             onClicked: {
               root.categoryIndex = category.index
               root.activateCategory(true)
@@ -800,7 +800,7 @@ Item {
     if (categoryModel.count === 0) return
     root.disarmPointer()
     root.categoryIndex = (root.categoryIndex + delta + categoryModel.count) % categoryModel.count
-    categoryList.positionViewAtIndex(root.categoryIndex, ListView.Center)
+    categoryList.positionViewAtIndex(root.categoryIndex, ListView.Beginning)
     if (!root.filterText) root.previewCategory(false)
   }
 
@@ -842,7 +842,7 @@ Item {
     for (var i = 0; i < categoryModel.count; i++) {
       if (categoryModel.get(i).itemId === topId) {
         root.categoryIndex = i
-        Qt.callLater(function() { categoryList.positionViewAtIndex(root.categoryIndex, ListView.Center) })
+        Qt.callLater(function() { categoryList.positionViewAtIndex(root.categoryIndex, ListView.Beginning) })
         return
       }
     }
@@ -1019,12 +1019,9 @@ Item {
   }
 
   function loadProvidersForSearch() {
-    var active = root.item(root.activeMenu) ? root.activeMenu : "root"
-
     for (var i = 0; i < root.itemOrder.length; i++) {
       var entry = root.item(root.itemOrder[i])
       if (!entry || !entry.provider || root.providersLoaded[entry.id]) continue
-      if (active !== "root" && entry.id !== active && !root.isDescendantOf(entry.id, active)) continue
 
       root.loadProviderForMenu(entry.id)
     }
@@ -1168,7 +1165,6 @@ Item {
       for (var i = 0; i < root.itemOrder.length; i++) {
         var entry = root.item(root.itemOrder[i])
         if (!entry || entry.id === "root") continue
-        if (!root.isDescendantOf(entry.id, active)) continue
         if (!root.matchesQuery(entry, query)) continue
 
         var detail = root.parentPathFor(entry.id)
