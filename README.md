@@ -1,11 +1,39 @@
 # XMB Menu for Omarchy
 
-A reversible, user-owned clone of `omarchy.menu` with a PS3-inspired,
-full-screen interface. It keeps Omarchy's menu model, providers, actions,
-application launcher, and existing `SUPER + SPACE` routing.
+A full-screen, PS3-inspired cross-media-bar interface for Omarchy's main menu.
+It preserves the existing menu structure, application launcher, providers,
+actions, search, and `SUPER + SPACE` shortcut while replacing the presentation
+with an animated horizontal-and-vertical XMB layout.
 
-The overlay appears on the focused display. This version deliberately does
-not change the Omarchy top bar.
+![XMB Menu preview](preview.png)
+
+## Features
+
+- Fixed-position horizontal category carousel
+- Inline vertical item carousel
+- Global search across menu entries and applications
+- Animated translucent background ribbons
+- Keyboard and pointer navigation
+- Focused-monitor presentation
+- Existing Omarchy top bar remains unchanged
+- Reversible replacement for the packaged `omarchy.menu`
+
+## Requirements
+
+- Omarchy 4 / Quattro with the Quickshell plugin system
+- No third-party packages or services
+
+The plugin reads Omarchy's existing menu definitions and uses the commands and
+application data already provided by the system.
+
+## Install
+
+```bash
+omarchy plugin add https://github.com/surfacedP/omarchy-xmb-menu.git --enable
+```
+
+Enabling the plugin routes the existing Omarchy menu shortcut to the XMB
+interface. The packaged menu is not modified.
 
 ## Controls
 
@@ -15,13 +43,47 @@ not change the Omarchy top bar.
 - Left / Backspace: go back inside nested menus
 - Escape or `SUPER + SPACE`: close
 - Type: search all menu entries and applications
-- Delete: uninstall a selected application (with confirmation)
+- Delete: uninstall a selected application, with confirmation
 
-Disable or remove `patrick.menu` to return immediately to the packaged
-`omarchy.menu` implementation.
+## Update
 
-The category rail uses a fixed XMB anchor: the selected category stays put
-while the surrounding categories slide horizontally. Search results are
-ranked across the complete menu and show their source category when useful.
-The background adds several gently intersecting, animated translucent ribbons
-while the overlay is visible.
+```bash
+omarchy plugin update io.github.surfacedp.xmb-menu
+```
+
+## Disable or remove
+
+Disable the XMB interface while keeping it installed:
+
+```bash
+omarchy plugin disable io.github.surfacedp.xmb-menu
+```
+
+Remove it completely:
+
+```bash
+omarchy plugin remove io.github.surfacedp.xmb-menu
+```
+
+Disabling or removing the plugin restores the packaged `omarchy.menu`. Your
+Omarchy menu configuration and top bar are not deleted or overwritten.
+
+## Configuration
+
+The plugin deliberately uses the standard Omarchy menu configuration, including
+user additions in `~/.config/omarchy/extensions/omarchy-menu.jsonc`. It does not
+introduce a separate menu database.
+
+## Attribution and trademarks
+
+This project is derived from the MIT-licensed Omarchy menu implementation by
+David Heinemeier Hansson and contributors. The XMB-inspired visual presentation
+and plugin modifications are maintained by Patrick Brook.
+
+"PlayStation" and "PS3" are trademarks of Sony Interactive Entertainment.
+This unofficial community project is not affiliated with or endorsed by Sony.
+No Sony artwork, firmware, or other proprietary assets are included.
+
+## License
+
+[MIT](LICENSE)

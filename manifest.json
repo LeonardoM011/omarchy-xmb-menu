@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "patrick.menu",
+  "id": "io.github.surfacedp.xmb-menu",
   "name": "XMB Menu",
   "version": "1.2.0",
   "author": "Patrick",
-  "description": "A focused-monitor, PS3-inspired XMB presentation for the Omarchy menu",
+  "description": "A full-screen, PS3-inspired XMB interface for the Omarchy menu",
   "kinds": [
     "menu",
     "bar-widget"
