@@ -140,32 +140,43 @@ Item {
 
       MouseArea { anchors.fill: parent; onClicked: {} }
 
-      // Use the compositor/Qt-provided wheel delta without adding our own
-      // sensitivity multiplier. High-resolution wheels can send partial
-      // steps, so retain their remainder until it reaches one standard notch.
+      // Use compositor/Qt-provided deltas without adding a speed multiplier.
+      // Touchpads report pixels while mouse wheels report angle units, so each
+      // input type keeps its native scale and accumulates partial row steps.
       WheelHandler {
         id: menuWheel
         target: null
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         enabled: panel.visible && !root.deleteConfirmOpen
         property real remainderY: 0
+        property bool accumulatingPixels: false
 
-        onEnabledChanged: remainderY = 0
+        onEnabledChanged: {
+          remainderY = 0
+          accumulatingPixels = false
+        }
         onWheel: function(event) {
-          var delta = event.angleDelta.y
+          var usePixels = event.pixelDelta.y !== 0
+          var delta = usePixels ? event.pixelDelta.y : event.angleDelta.y
           if (delta === 0) return
+
+          if (remainderY !== 0 && accumulatingPixels !== usePixels)
+            remainderY = 0
+          accumulatingPixels = usePixels
 
           if (remainderY !== 0 && ((remainderY > 0) !== (delta > 0)))
             remainderY = 0
           remainderY += delta
 
-          var steps = Math.floor(Math.abs(remainderY) / 120)
+          var stepSize = usePixels ? root.baseRowHeight : 120
+          var steps = Math.floor(Math.abs(remainderY) / stepSize)
           if (steps === 0) {
             event.accepted = true
             return
           }
 
           var direction = remainderY > 0 ? -1 : 1
-          remainderY -= (remainderY > 0 ? 1 : -1) * steps * 120
+          remainderY -= (remainderY > 0 ? 1 : -1) * steps * stepSize
           root.select(direction * steps)
           event.accepted = true
         }

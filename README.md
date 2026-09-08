@@ -13,7 +13,7 @@ with an animated horizontal-and-vertical XMB layout.
 - Inline vertical item carousel
 - Global search across menu entries and applications
 - Animated translucent background ribbons
-- Keyboard, mouse-wheel, and click navigation
+- Keyboard, mouse-wheel, touchpad, and click navigation
 - Focused-monitor presentation
 - Existing Omarchy top bar remains unchanged
 - Reversible replacement for the packaged `omarchy.menu`
@@ -39,7 +39,7 @@ interface. The packaged menu is not modified.
 
 - Left / Right: choose a root category
 - Up / Down: choose an item
-- Mouse wheel: scroll items using the system wheel sensitivity
+- Mouse wheel / two-finger touchpad: scroll using the system sensitivity
 - Click: open an item or choose a category
 - Enter / Right: open or run
 - Left / Backspace: go back inside nested menus
