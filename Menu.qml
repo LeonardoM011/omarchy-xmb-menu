@@ -140,6 +140,37 @@ Item {
 
       MouseArea { anchors.fill: parent; onClicked: {} }
 
+      // Use the compositor/Qt-provided wheel delta without adding our own
+      // sensitivity multiplier. High-resolution wheels can send partial
+      // steps, so retain their remainder until it reaches one standard notch.
+      WheelHandler {
+        id: menuWheel
+        target: null
+        enabled: panel.visible && !root.deleteConfirmOpen
+        property real remainderY: 0
+
+        onEnabledChanged: remainderY = 0
+        onWheel: function(event) {
+          var delta = event.angleDelta.y
+          if (delta === 0) return
+
+          if (remainderY !== 0 && ((remainderY > 0) !== (delta > 0)))
+            remainderY = 0
+          remainderY += delta
+
+          var steps = Math.floor(Math.abs(remainderY) / 120)
+          if (steps === 0) {
+            event.accepted = true
+            return
+          }
+
+          var direction = remainderY > 0 ? -1 : 1
+          remainderY -= (remainderY > 0 ? 1 : -1) * steps * 120
+          root.select(direction * steps)
+          event.accepted = true
+        }
+      }
+
       Item {
         id: keyCatcher
         anchors.fill: parent
@@ -442,17 +473,8 @@ Item {
               }
 
               MouseArea {
-                id: xmbMouseArea
                 anchors.fill: parent
-                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onEntered: root.selectFromPointer(xmbRow.index, xmbRow, {
-                  x: xmbMouseArea.mouseX,
-                  y: xmbMouseArea.mouseY
-                })
-                onPositionChanged: function(mouse) {
-                  root.selectFromPointer(xmbRow.index, xmbRow, mouse)
-                }
                 onClicked: { root.selectedIndex = xmbRow.index; root.activateIndex(xmbRow.index, true) }
               }
             }
@@ -581,9 +603,7 @@ Item {
               y: row.visualTop
               width: parent.width
               height: row.visualHeight
-              hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
-              onEntered: { root.cursorActive = true; root.selectedIndex = row.index }
               onClicked: { root.selectedIndex = row.index; root.activateIndex(row.index, true) }
             }
           }
@@ -857,7 +877,6 @@ Item {
 
   function selectCategory(delta) {
     if (categoryModel.count === 0) return
-    root.disarmPointer()
     var nextIndex = Math.max(0, Math.min(categoryModel.count - 1, root.categoryIndex + delta))
     if (nextIndex === root.categoryIndex) return
     root.categoryIndex = nextIndex
@@ -1302,7 +1321,6 @@ Item {
   function select(delta) {
     if (displayModel.count === 0) return
 
-    root.disarmPointer()
     if (!cursorActive) {
       cursorActive = true
       selectedIndex = delta < 0 ? displayModel.count - 1 : 0
@@ -1317,7 +1335,6 @@ Item {
     root.filterText = nextFilter
     root.selectedIndex = 0
     root.cursorActive = root.mode !== "input"
-    root.disarmPointer()
     if (!root.dmenuActive && root.filterText.trim()) root.loadProvidersForSearch()
     root.rebuildDisplay()
   }
@@ -1331,8 +1348,6 @@ Item {
     root.filterText = ""
     root.selectedIndex = 0
     root.cursorActive = true
-    if (fromPointer) pointerGate.allowInitialSample()
-    else root.disarmPointer()
     root.rebuildDisplay()
     root.invalidateVolatileProvider(id)
     root.loadProviderForMenu(id)
@@ -1396,7 +1411,6 @@ Item {
     root.deleteConfirmOpen = false
     root.deleteTarget = null
     deleteConfirm.selectedIndex = 1
-    root.disarmPointer()
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
@@ -1442,7 +1456,6 @@ Item {
     filterText = ""
     selectedIndex = 0
     cursorActive = true
-    root.disarmPointer()
     root.evaluateGuards()
     opened = true
     if (activeMenu === "root" && categoryModel.count > 0) {
@@ -1476,7 +1489,6 @@ Item {
     filterText = ""
     selectedIndex = 0
     cursorActive = mode !== "input"
-    root.disarmPointer()
     opened = true
     rebuildDisplay()
 
@@ -1514,16 +1526,6 @@ Item {
     return "ok"
   }
 
-  function disarmPointer() {
-    pointerGate.reset()
-  }
-
-  function selectFromPointer(index, item, mouse) {
-    if (!pointerGate.moved(item, mouse)) return
-    root.cursorActive = true
-    root.selectedIndex = index
-  }
-
   Process {
     id: providerProc
     property string menuId: ""
@@ -1548,11 +1550,6 @@ Item {
       if (root.applySerial === root.requestSerial)
         root.opened = false
     }
-  }
-
-  PointerMoveGate {
-    id: pointerGate
-    referenceItem: card
   }
 
   Connections {
